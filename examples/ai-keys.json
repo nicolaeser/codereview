@@ -1,0 +1,9 @@
+{
+  "openai": { "key": "replace-me", "model": "gpt-4.1-mini" },
+  "anthropic": { "key": "replace-me", "model": "claude-sonnet-4-5" },
+  "openrouter": { "key": "replace-me" },
+  "openrouter-eu": { "key": "replace-me", "model": "openai/gpt-4.1-mini" },
+  "xai": { "key": "replace-me", "model": "grok-4.6" },
+  "grok": { "key": "", "model": "grok-4.6" },
+  "codex": { "key": "" }
+}

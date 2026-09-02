@@ -1,0 +1,106 @@
+# Main channel only. Must not publish GHCR tags `dev` or `development`.
+name: main
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: main-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: test -z "$(gofmt -l cmd internal)"
+      - run: go vet ./...
+      - run: go test -race -count=1 ./...
+      - run: go build -trimpath -o /tmp/codereview ./cmd/codereview
+      - run: go build -trimpath -o /tmp/codereview-webhook ./cmd/codereview-webhook
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Version
+        id: version
+        run: |
+          short_sha="$(echo "${GITHUB_SHA}" | cut -c1-7)"
+          version="v$(date -u +%Y.%m.%d).${short_sha}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "short_sha=${short_sha}" >> "${GITHUB_OUTPUT}"
+
+      - uses: docker/metadata-action@v6
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=sha-${{ steps.version.outputs.short_sha }}
+            type=sha,format=long
+
+      - uses: docker/build-push-action@v7
+        id: build
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          body="$(printf '%s\n\n## Container\n\n```text\n%s:latest\n%s:%s\n%s@%s\n```\n' \
+            "Automated release from \`${GITHUB_SHA}\` on \`main\`." \
+            "${IMAGE}" \
+            "${IMAGE}" \
+            "${VERSION}" \
+            "${IMAGE}" \
+            "${DIGEST}")"
+          if gh release view "${VERSION}" >/dev/null 2>&1; then
+            echo "Release ${VERSION} already exists"
+            exit 0
+          fi
+          gh release create "${VERSION}" \
+            --target "${GITHUB_SHA}" \
+            --title "${VERSION}" \
+            --notes "${body}" \
+            --generate-notes

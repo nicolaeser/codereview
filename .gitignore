@@ -1,0 +1,12 @@
+.env
+.gocache/
+.grok/
+/ai-keys.json
+data/
+.DS_Store
+*.tgz
+/codereview
+/codereview-webhook
+INSTRUCTION-ADDITIONAL.md
+auth.json
+

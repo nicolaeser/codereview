@@ -1,0 +1,11 @@
+.git
+.github
+.grok
+.env
+.gocache
+ai-keys.json
+data
+docs
+*.md
+!INSTRUCTION.md
+

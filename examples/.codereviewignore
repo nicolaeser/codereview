@@ -1,0 +1,10 @@
+# Paths CodeReview should not review. One glob per line, same syntax as IGNORE_PATHS.
+# Fetched from the merge request head SHA. Missing file is a no-op.
+# Also accepted: .codereview/ignore
+#
+# vendor/**
+# node_modules/**
+# dist/**
+# **/*.generated.go
+# **/*.min.js
+# *.lock

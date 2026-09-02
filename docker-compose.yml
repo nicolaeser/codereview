@@ -1,0 +1,33 @@
+# GitLab POSTs merge-request and comment events to this container.
+#
+#   mkdir -p data && docker compose up -d
+#   Group webhook (Merge requests + Comments):
+#   http://127.0.0.1:8090/gitlab-webhook
+#
+# One bind: ./data holds ai-keys.json, state.json, and auth.json.
+# Health: GET http://127.0.0.1:8090/health
+# Debug:  docker compose exec -it codereview-webhook codereview --project 12 --mr 34
+# Login:  docker compose exec -it codereview-webhook codereview login grok
+
+services:
+  codereview-webhook:
+    image: ghcr.io/nicolaeser/codereview:latest
+    restart: unless-stopped
+    environment:
+      GITLAB_API_URL: "https://gitlab.example.com/api/v4"
+      GITLAB_TOKEN: "replace-me"
+      WEBHOOK_LISTEN: "0.0.0.0:8090"
+      WEBHOOK_SECRET: "replace-me"
+      WEBHOOK_SIGNING_TOKEN: ""
+      AI_PROVIDER: "openai,anthropic,openrouter,openrouter-eu,xai,grok,codex"
+      AI_MODEL: "gpt-4.1-mini"
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "codereview-webhook", "health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

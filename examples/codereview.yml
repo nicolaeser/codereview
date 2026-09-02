@@ -1,0 +1,45 @@
+# Optional reviewed-repository policy.
+# Copy to the repository root as .codereview.yml.
+# CodeReview reads it from the merge request head SHA.
+# A missing file is a no-op. Invalid YAML fails before any model call.
+#
+# Repository policy, not secrets. Tokens, API keys, GitLab/AI URLs, privacy,
+# instruction paths, JOB_TIMEOUT, and STATE_PATH are ignored if present.
+# provider must be listed in the operator AI_PROVIDER env and have a usable
+# keys-file entry. See docs/CONFIGURATION.md.
+
+review:
+  # Does not set a key or URL.
+  # xai = Grok via API key; grok = same API via SuperGrok subscription login.
+  provider: openai
+  model: gpt-4.1-mini
+  # models:
+  #   - grok-4.6
+  #   - grok-4
+  mode: standard
+  drafts: false
+  ignore_paths:
+    - vendor/**
+    - node_modules/**
+    - dist/**
+    - "**/*.generated.go"
+  mention: codereview
+  mention_aliases:
+    - cr
+  # Extra title/label tokens that disable review of this MR.
+  # skip_tokens:
+  #   - wip
+  # Post one note when disabled. Default is silent.
+  # skip_ack: false
+  path_instructions:
+    - path: "internal/ai/**"
+      instructions: "Focus on provider URL construction, auth headers, and privacy fields. Do not suggest sending prompts to a new host."
+    - path: "internal/gitlab/**"
+      instructions: "Treat GitLab writes as privileged. Prefer fail-closed behavior on note/discussion errors."
+  # Extra protocol when the diff is only manifests/lockfiles. Default off.
+  # dependency_bumps: false
+  # GitLab Approve for dependency-only + Ready to merge. Default off.
+  # Ignored if this MR also changes this file, unless the operator env is set.
+  # approve_dependency_bumps: false
+  # notify | wait | validate. Default off.
+  # dependency_bump_mode: wait

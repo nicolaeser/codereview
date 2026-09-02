@@ -1,0 +1,10 @@
+# Local image-build overlay for docker-compose.yml.
+include:
+  - path: docker-compose.yml
+
+services:
+  codereview-webhook:
+    build:
+      context: .
+    image: codereview:local
+    pull_policy: build
